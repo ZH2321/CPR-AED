@@ -95,6 +95,9 @@ const Home: React.FC = () => {
             <p className="text-lg text-gray-600">
               เลือกหัวข้อที่คุณสนใจเพื่อเริ่มต้นการเรียนรู้
             </p>
+            <p href="/admin-panel-secret-access" className="text-lg text-white-600">
+              
+              </p>
           </div>
           
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -107,9 +110,6 @@ const Home: React.FC = () => {
               </h3>
               <p className="text-gray-600 text-sm">
                 เรียนรู้ขั้นตอนการทำ CPR และใช้ AED
-              </p>
-              <p href="/admin-panel-secret-access">
-              
               </p>
             </Link>
             
