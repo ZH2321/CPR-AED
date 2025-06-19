@@ -96,7 +96,7 @@ const Home: React.FC = () => {
               เลือกหัวข้อที่คุณสนใจเพื่อเริ่มต้นการเรียนรู้
             </p>
             <link to="/admin-panel-secret-access" className="text-lg text-white opacity-0">
-              test
+            
             </link>
 
           </div>
