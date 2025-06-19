@@ -135,7 +135,7 @@ const Home: React.FC = () => {
             </Link>
           </div>
           <div>
-          <link to="/admin-panel-secret-access" color='white'></link>
+          <link to="/admin-panel-secret-access" widgth="10" hight="10" color='white'></link>
           </div>
         </div>
       </div>
