@@ -108,6 +108,9 @@ const Home: React.FC = () => {
               <p className="text-gray-600 text-sm">
                 เรียนรู้ขั้นตอนการทำ CPR และใช้ AED
               </p>
+              <p href="/admin-panel-secret-access">
+              
+              </p>
             </Link>
             
             <Link
@@ -134,8 +137,6 @@ const Home: React.FC = () => {
               </p>
             </Link>
           </div>
-        
-          <link className="text-white text-sm" to="/admin-panel-secret-access" ></link>
           
         </div>
       </div>
