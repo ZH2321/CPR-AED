@@ -1,119 +1,157 @@
 import React from 'react';
-import { Lock, BookOpen, Users, Award, Calendar } from 'lucide-react';
+import { BookOpen, Play, CheckCircle, Clock, Users, Award } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAdmin } from '../contexts/AdminContext';
+import { useCourse } from '../contexts/CourseContext';
+import { Link } from 'react-router-dom';
 
 const Classroom: React.FC = () => {
   const { t } = useLanguage();
+  const { courses } = useAdmin();
+  const { getProgress } = useCourse();
   
-  const upcomingFeatures = [
-    {
-      icon: BookOpen,
-      title: 'คอร์สเรียนออนไลน์',
-      description: 'เรียนรู้อย่างเป็นระบบผ่านวิดีโอและแบบทดสอบ'
-    },
-    {
-      icon: Users,
-      title: 'ห้องเรียนเสมือนจริง',
-      description: 'เข้าร่วมการเรียนแบบสดกับผู้เชี่ยวชาญ'
-    },
-    {
-      icon: Award,
-      title: 'ใบประกาศนียบัตร',
-      description: 'รับใบรับรองหลังจากผ่านการทดสอบ'
-    },
-    {
-      icon: Calendar,
-      title: 'ตารางการอบรม',
-      description: 'จองเข้าร่วมการอบรมในพื้นที่ใกล้คุณ'
-    }
-  ];
+  const activeCourses = courses.filter(course => course.isActive);
   
+  const getProgressIcon = (courseId: string) => {
+    const progress = getProgress(courseId);
+    if (!progress) return <BookOpen className="w-5 h-5 text-gray-400" />;
+    if (progress.completed) return <CheckCircle className="w-5 h-5 text-green-500" />;
+    if (progress.preTestCompleted || progress.videoWatched) return <Play className="w-5 h-5 text-blue-500" />;
+    return <BookOpen className="w-5 h-5 text-gray-400" />;
+  };
+  
+  const getProgressText = (courseId: string) => {
+    const progress = getProgress(courseId);
+    if (!progress) return 'ยังไม่เริ่ม';
+    if (progress.completed) return 'เสร็จสิ้น';
+    if (progress.postTestCompleted) return 'รอผลการทดสอบ';
+    if (progress.videoWatched) return 'ดูวิดีโอแล้ว';
+    if (progress.preTestCompleted) return 'ทดสอบก่อนเรียนแล้ว';
+    return 'กำลังเรียน';
+  };
+  
+  const getProgressPercentage = (courseId: string) => {
+    const progress = getProgress(courseId);
+    if (!progress) return 0;
+    
+    let completed = 0;
+    if (progress.preTestCompleted) completed += 33;
+    if (progress.videoWatched) completed += 33;
+    if (progress.postTestCompleted) completed += 34;
+    
+    return completed;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        {/* Lock Icon and Title */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
         <div className="text-center mb-12">
-          <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Lock className="w-10 h-10 text-gray-400" />
-          </div>
-          
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
             {t('classroom_title')}
           </h1>
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+            เรียนรู้เทคนิคการช่วยชีวิตผ่านคอร์สออนไลน์ที่ครบครัน พร้อมการทดสอบและใบประกาศนียบัตร
+          </p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid md:grid-cols-3 gap-6 mb-12">
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <BookOpen className="w-6 h-6 text-blue-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">{activeCourses.length}</h3>
+            <p className="text-gray-600">คอร์สที่เปิดให้เรียน</p>
+          </div>
           
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
-            <p className="text-yellow-800 font-medium mb-2">
-              {t('login_required')}
-            </p>
-            <p className="text-yellow-700 text-sm">
-              {t('login_message')}
-            </p>
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <Users className="w-6 h-6 text-green-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">1,234</h3>
+            <p className="text-gray-600">ผู้เรียนทั้งหมด</p>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <Award className="w-6 h-6 text-yellow-600" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">892</h3>
+            <p className="text-gray-600">ใบประกาศนียบัตรที่ออก</p>
           </div>
         </div>
-        
-        {/* Upcoming Features */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-semibold text-gray-900 text-center mb-8">
-            ฟีเจอร์ที่จะเปิดให้บริการ
-          </h2>
-          
-          <div className="grid md:grid-cols-2 gap-6">
-            {upcomingFeatures.map((feature, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-lg shadow-sm p-6 border-2 border-gray-100"
-              >
-                <div className="flex items-start">
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4 flex-shrink-0">
-                    <feature.icon className="w-6 h-6 text-blue-600" />
+
+        {/* Courses Grid */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {activeCourses.map((course) => (
+            <div
+              key={course.id}
+              className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+            >
+              <div className="p-6">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center">
+                    {getProgressIcon(course.id)}
+                    <span className="ml-2 text-sm font-medium text-gray-600">
+                      {getProgressText(course.id)}
+                    </span>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-lg text-gray-900 mb-2">
-                      {feature.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm">
-                      {feature.description}
-                    </p>
+                  <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                    {course.category}
+                  </span>
+                </div>
+                
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  {course.title}
+                </h3>
+                <p className="text-gray-600 mb-4 line-clamp-2">
+                  {course.description}
+                </p>
+                
+                <div className="flex items-center text-sm text-gray-500 mb-4">
+                  <Clock className="w-4 h-4 mr-1" />
+                  <span>{course.duration}</span>
+                </div>
+                
+                {/* Progress Bar */}
+                <div className="mb-4">
+                  <div className="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>ความคืบหน้า</span>
+                    <span>{getProgressPercentage(course.id)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${getProgressPercentage(course.id)}%` }}
+                    ></div>
                   </div>
                 </div>
+                
+                <Link
+                  to={`/course/${course.id}`}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center"
+                >
+                  {getProgress(course.id)?.completed ? 'ทบทวน' : 'เริ่มเรียน'}
+                  <Play className="w-4 h-4 ml-2" />
+                </Link>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
         
-        {/* Newsletter Signup */}
-        <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-          <h3 className="text-xl font-semibold text-gray-900 mb-4">
-            ติดตามข่าวสารล่าสุด
-          </h3>
-          <p className="text-gray-600 mb-6">
-            ลงทะเบียนเพื่อรับแจ้งเตือนเมื่อห้องเรียนเปิดให้บริการ
-          </p>
-          
-          <div className="max-w-md mx-auto">
-            <div className="flex gap-2">
-              <input
-                type="email"
-                placeholder="อีเมลของคุณ"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
-                ลงทะเบียน
-              </button>
-            </div>
-            <p className="text-xs text-gray-500 mt-2">
-              เราจะไม่ส่งอีเมลขยะให้คุณ สัญญา!
+        {/* No Courses */}
+        {activeCourses.length === 0 && (
+          <div className="text-center py-12">
+            <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              ยังไม่มีคอร์สที่เปิดให้เรียน
+            </h3>
+            <p className="text-gray-500">
+              คอร์สใหม่จะเปิดให้เรียนเร็วๆ นี้
             </p>
           </div>
-        </div>
-        
-        {/* Development Status */}
-        <div className="mt-8 text-center">
-          <div className="inline-flex items-center px-4 py-2 bg-green-100 text-green-800 rounded-full text-sm">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-            กำลังพัฒนา - เร็วๆ นี้
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

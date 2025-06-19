@@ -1,73 +1,21 @@
 import React from 'react';
 import { Clock, User, ArrowRight } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAdmin } from '../contexts/AdminContext';
 
 const Articles: React.FC = () => {
   const { t } = useLanguage();
+  const { articles } = useAdmin();
   
-  const articles = [
-    {
-      id: 1,
-      title: t('article1_title'),
-      excerpt: t('article1_excerpt'),
-      readTime: '5 นาที',
-      author: 'ทีมแพทย์',
-      image: 'https://images.pexels.com/photos/7659564/pexels-photo-7659564.jpeg?auto=compress&cs=tinysrgb&w=800',
-      category: 'CPR'
-    },
-    {
-      id: 2,
-      title: t('article2_title'),
-      excerpt: t('article2_excerpt'),
-      readTime: '3 นาที',
-      author: 'ทีมแพทย์',
-      image: 'https://images.pexels.com/photos/4173251/pexels-photo-4173251.jpeg?auto=compress&cs=tinysrgb&w=800',
-      category: 'ปฐมพยาบาล'
-    },
-    {
-      id: 3,
-      title: t('article3_title'),
-      excerpt: t('article3_excerpt'),
-      readTime: '7 นาที',
-      author: 'ทีมแพทย์',
-      image: 'https://images.pexels.com/photos/7659731/pexels-photo-7659731.jpeg?auto=compress&cs=tinysrgb&w=800',
-      category: 'ปฐมพยาบาล'
-    },
-    {
-      id: 4,
-      title: 'การดูแลผู้ป่วยหมดสติ',
-      excerpt: 'ขั้นตอนการตรวจสอบและดูแลผู้ป่วยที่หมดสติอย่างปลอดภัย',
-      readTime: '4 นาที',
-      author: 'ทีมแพทย์',
-      image: 'https://images.pexels.com/photos/4173624/pexels-photo-4173624.jpeg?auto=compress&cs=tinysrgb&w=800',
-      category: 'ฉุกเฉิน'
-    },
-    {
-      id: 5,
-      title: 'การปฐมพยาบาลแผลไฟไหม้',
-      excerpt: 'วิธีการช่วยเหลือและปฐมพยาบาลแผลจากไฟไหม้',
-      readTime: '6 นาที',
-      author: 'ทีมแพทย์',
-      image: 'https://images.pexels.com/photos/4386467/pexels-photo-4386467.jpeg?auto=compress&cs=tinysrgb&w=800',
-      category: 'ปฐมพยาบาล'
-    },
-    {
-      id: 6,
-      title: 'การช่วยเหลือเด็กสำลัก',
-      excerpt: 'เทคนิคพิเศษสำหรับการช่วยเหลือเด็กที่สำลักอาหาร',
-      readTime: '4 นาที',
-      author: 'ทีมแพทย์',
-      image: 'https://images.pexels.com/photos/7659690/pexels-photo-7659690.jpeg?auto=compress&cs=tinysrgb&w=800',
-      category: 'เด็ก'
-    }
-  ];
+  // Only show published articles
+  const publishedArticles = articles.filter(article => article.isPublished);
   
-  const categories = ['ทั้งหมด', 'CPR', 'ปฐมพยาบาล', 'ฉุกเฉิน', 'เด็ก'];
+  const categories = ['ทั้งหมด', ...Array.from(new Set(publishedArticles.map(article => article.category)))];
   const [selectedCategory, setSelectedCategory] = React.useState('ทั้งหมด');
   
   const filteredArticles = selectedCategory === 'ทั้งหมด' 
-    ? articles 
-    : articles.filter(article => article.category === selectedCategory);
+    ? publishedArticles 
+    : publishedArticles.filter(article => article.category === selectedCategory);
   
   return (
     <div className="min-h-screen bg-gray-50">
