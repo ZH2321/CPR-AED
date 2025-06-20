@@ -1,5 +1,10 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Course, Question } from './AdminContext';
+import { useAuth } from './AuthContext';
+import { useSupabase } from '../hooks/useSupabase';
+import type { Database } from '../lib/database.types';
+
+type Tables = Database['public']['Tables'];
 
 interface CourseProgress {
   courseId: string;
@@ -50,6 +55,7 @@ interface CourseContextType {
   resetTest: () => void;
   generateCertificate: (courseId: string) => Certificate | null;
   getCertificate: (courseId: string) => Certificate | undefined;
+  refreshProgress: () => Promise<void>;
 }
 
 const CourseContext = createContext<CourseContextType | undefined>(undefined);
@@ -63,30 +69,108 @@ export const CourseProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [studentName, setStudentName] = useState<string>('');
 
+  const { user } = useAuth();
+  const {
+    fetchUserProgress,
+    upsertUserProgress,
+    fetchUserCertificates,
+    createCertificate,
+  } = useSupabase();
+
+  // Transform database progress to app format
+  const transformProgress = (dbProgress: Tables['user_progress']['Row']): CourseProgress => ({
+    courseId: dbProgress.course_id,
+    preTestCompleted: dbProgress.pre_test_completed,
+    preTestScore: dbProgress.pre_test_score,
+    videoWatched: dbProgress.video_watched,
+    postTestCompleted: dbProgress.post_test_completed,
+    postTestScore: dbProgress.post_test_score,
+    completed: dbProgress.completed,
+    completedAt: dbProgress.completed_at || undefined,
+    certificateGenerated: dbProgress.certificate_generated,
+  });
+
+  // Transform database certificate to app format
+  const transformCertificate = (dbCert: Tables['certificates']['Row']): Certificate => ({
+    id: dbCert.id,
+    courseId: dbCert.course_id,
+    courseName: dbCert.course_name,
+    studentName: dbCert.student_name,
+    completedAt: dbCert.completed_at,
+    score: dbCert.score,
+    totalScore: dbCert.total_score,
+    percentage: dbCert.percentage,
+    certificateNumber: dbCert.certificate_number,
+  });
+
+  // Load user progress and certificates
+  const refreshProgress = async () => {
+    if (!user) return;
+
+    try {
+      // Fetch progress
+      const dbProgress = await fetchUserProgress(user.id);
+      const transformedProgress = dbProgress.map(transformProgress);
+      setProgress(transformedProgress);
+
+      // Fetch certificates
+      const dbCertificates = await fetchUserCertificates(user.id);
+      const transformedCertificates = dbCertificates.map(transformCertificate);
+      setCertificates(transformedCertificates);
+    } catch (error) {
+      console.error('Error refreshing progress:', error);
+    }
+  };
+
+  // Load data when user changes
+  useEffect(() => {
+    if (user) {
+      refreshProgress();
+    } else {
+      setProgress([]);
+      setCertificates([]);
+    }
+  }, [user]);
+
   const getProgress = (courseId: string): CourseProgress | undefined => {
     return progress.find(p => p.courseId === courseId);
   };
 
-  const updateProgress = (courseId: string, updates: Partial<CourseProgress>) => {
+  const updateProgress = async (courseId: string, updates: Partial<CourseProgress>) => {
+    if (!user) return;
+
+    const currentProgress = getProgress(courseId);
+    const newProgress = {
+      ...currentProgress,
+      ...updates,
+      courseId,
+    };
+
+    // Update local state
     setProgress(prev => {
       const existing = prev.find(p => p.courseId === courseId);
       if (existing) {
-        return prev.map(p => p.courseId === courseId ? { ...p, ...updates } : p);
+        return prev.map(p => p.courseId === courseId ? newProgress : p);
       } else {
-        const newProgress: CourseProgress = {
-          courseId,
-          preTestCompleted: false,
-          preTestScore: 0,
-          videoWatched: false,
-          postTestCompleted: false,
-          postTestScore: 0,
-          completed: false,
-          certificateGenerated: false,
-          ...updates
-        };
         return [...prev, newProgress];
       }
     });
+
+    // Update database
+    const dbProgress: Tables['user_progress']['Insert'] = {
+      user_id: user.id,
+      course_id: courseId,
+      pre_test_completed: newProgress.preTestCompleted,
+      pre_test_score: newProgress.preTestScore,
+      video_watched: newProgress.videoWatched,
+      post_test_completed: newProgress.postTestCompleted,
+      post_test_score: newProgress.postTestScore,
+      completed: newProgress.completed,
+      completed_at: newProgress.completedAt || null,
+      certificate_generated: newProgress.certificateGenerated,
+    };
+
+    await upsertUserProgress(dbProgress);
   };
 
   const startTest = (course: Course, type: 'pre' | 'post') => {
@@ -96,7 +180,7 @@ export const CourseProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setTestResult(null);
   };
 
-  const submitTest = (answers: { questionId: string; selectedAnswer: number }[]) => {
+  const submitTest = async (answers: { questionId: string; selectedAnswer: number }[]) => {
     if (!currentTest || !currentCourse || !testType) return;
 
     const results = answers.map(answer => {
@@ -139,11 +223,11 @@ export const CourseProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }
     }
 
-    updateProgress(currentCourse.id, updates);
+    await updateProgress(currentCourse.id, updates);
   };
 
-  const markVideoWatched = (courseId: string) => {
-    updateProgress(courseId, { videoWatched: true });
+  const markVideoWatched = async (courseId: string) => {
+    await updateProgress(courseId, { videoWatched: true });
   };
 
   const resetTest = () => {
@@ -158,7 +242,9 @@ export const CourseProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     return `CPR-${timestamp.slice(-6)}-${random}`;
   };
 
-  const generateCertificate = (courseId: string): Certificate | null => {
+  const generateCertificate = async (courseId: string): Promise<Certificate | null> => {
+    if (!user) return null;
+
     const courseProgress = getProgress(courseId);
     const course = currentCourse;
     
@@ -184,10 +270,28 @@ export const CourseProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       certificateNumber: generateCertificateNumber()
     };
 
-    setCertificates(prev => [...prev, certificate]);
-    updateProgress(courseId, { certificateGenerated: true });
+    // Save to database
+    const dbCertificate: Tables['certificates']['Insert'] = {
+      user_id: user.id,
+      course_id: certificate.courseId,
+      course_name: certificate.courseName,
+      student_name: certificate.studentName,
+      completed_at: certificate.completedAt,
+      score: certificate.score,
+      total_score: certificate.totalScore,
+      percentage: certificate.percentage,
+      certificate_number: certificate.certificateNumber,
+    };
 
-    return certificate;
+    const savedCertificate = await createCertificate(dbCertificate);
+    if (savedCertificate) {
+      const transformedCert = transformCertificate(savedCertificate);
+      setCertificates(prev => [...prev, transformedCert]);
+      await updateProgress(courseId, { certificateGenerated: true });
+      return transformedCert;
+    }
+
+    return null;
   };
 
   const getCertificate = (courseId: string): Certificate | undefined => {
@@ -211,7 +315,8 @@ export const CourseProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       getProgress,
       resetTest,
       generateCertificate,
-      getCertificate
+      getCertificate,
+      refreshProgress,
     }}>
       {children}
     </CourseContext.Provider>
